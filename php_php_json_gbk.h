@@ -34,13 +34,10 @@ extern zend_module_entry php_json_gbk_module_entry;
 #include "TSRM.h"
 #endif
 
-PHP_MINIT_FUNCTION(php_json_gbk);
-PHP_MSHUTDOWN_FUNCTION(php_json_gbk);
-PHP_RINIT_FUNCTION(php_json_gbk);
-PHP_RSHUTDOWN_FUNCTION(php_json_gbk);
 PHP_MINFO_FUNCTION(php_json_gbk);
 
 PHP_FUNCTION(confirm_php_json_gbk_compiled);	/* For testing, remove later. */
+PHP_FUNCTION(gbk_json_decode);
 
 /* 
   	Declare any global variables you may need between the BEGIN
@@ -70,6 +67,7 @@ ZEND_END_MODULE_GLOBALS(php_json_gbk)
 
 #endif	/* PHP_PHP_JSON_GBK_H */
 
+PHP_PHP_JSON_GBK_API void php_json_decode(zval * return_value, char * buf, int buf_len, zend_bool assoc TSRMLS_DC);
 
 /*
  * Local variables:

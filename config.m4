@@ -13,9 +13,9 @@ dnl [  --with-php_json_gbk             Include php_json_gbk support])
 
 dnl Otherwise use enable:
 
-dnl PHP_ARG_ENABLE(php_json_gbk, whether to enable php_json_gbk support,
+PHP_ARG_ENABLE(php_json_gbk, whether to enable php_json_gbk support,
 dnl Make sure that the comment is aligned:
-dnl [  --enable-php_json_gbk           Enable php_json_gbk support])
+[  --enable-php_json_gbk           Enable php_json_gbk support])
 
 if test "$PHP_PHP_JSON_GBK" != "no"; then
   dnl Write more examples of tests here...
