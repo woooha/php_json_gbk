@@ -1,5 +1,6 @@
 #!/bin/sh
 
+#Modifies follow to your php path
 PHP_BIN_DIR=/Users/woooha/Workspaces/php/bin/
 PHPIZE=$PHP_BIN_DIR/phpize
 PHP_CONFIG=$PHP_BIN_DIR/php-config

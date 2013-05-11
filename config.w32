@@ -5,7 +5,7 @@
 // ARG_WITH("php_json_gbk", "for php_json_gbk support", "no");
 
 // Otherwise, use ARG_ENABLE
-// ARG_ENABLE("php_json_gbk", "enable php_json_gbk support", "no");
+ARG_ENABLE("php_json_gbk", "enable php_json_gbk support", "no");
 
 if (PHP_PHP_JSON_GBK != "no") {
 	EXTENSION("php_json_gbk", "php_json_gbk.c");
