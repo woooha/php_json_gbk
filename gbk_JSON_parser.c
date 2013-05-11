@@ -322,51 +322,15 @@ use_double:
 }
 
 
-static void utf16_to_utf8(smart_str *buf, unsigned short utf16)
+static void ushort_to_gbk(smart_str *buf, unsigned short ushort)
 {
-    if (utf16 < 0x80){
-        smart_str_appendc(buf, (unsigned char) utf16);
+    if (ushort < 0x80){
+        smart_str_appendc(buf, (unsigned char) ushort);
     } else {
-        smart_str_appendc(buf, utf16);
-        smart_str_appendc(buf, utf16 >> 8); // !important 
+        smart_str_appendc(buf, ushort);
+        smart_str_appendc(buf, ushort >> 8); // !important 
     }
     return;
-
-    //DEBUG
-    if (utf16 < 0x80)
-    {
-        smart_str_appendc(buf, (unsigned char) utf16);
-    }
-    else if (utf16 < 0x800)
-    {
-        smart_str_appendc(buf, 0xc0 | (utf16 >> 6));
-        smart_str_appendc(buf, 0x80 | (utf16 & 0x3f));
-    }
-    else if ((utf16 & 0xfc00) == 0xdc00
-                && buf->len >= 3
-                && ((unsigned char) buf->c[buf->len - 3]) == 0xed
-                && ((unsigned char) buf->c[buf->len - 2] & 0xf0) == 0xa0
-                && ((unsigned char) buf->c[buf->len - 1] & 0xc0) == 0x80)
-    {
-        /* found surrogate pair */
-        unsigned long utf32;
-
-        utf32 = (((buf->c[buf->len - 2] & 0xf) << 16)
-                    | ((buf->c[buf->len - 1] & 0x3f) << 10)
-                    | (utf16 & 0x3ff)) + 0x10000;
-        buf->len -= 3;
-
-        smart_str_appendc(buf, 0xf0 | (utf32 >> 18));
-        smart_str_appendc(buf, 0x80 | ((utf32 >> 12) & 0x3f));
-        smart_str_appendc(buf, 0x80 | ((utf32 >> 6) & 0x3f));
-        smart_str_appendc(buf, 0x80 | (utf32 & 0x3f));
-    }
-    else
-    {
-        smart_str_appendc(buf, 0xe0 | (utf16 >> 12));
-        smart_str_appendc(buf, 0x80 | ((utf16 >> 6) & 0x3f));
-        smart_str_appendc(buf, 0x80 | (utf16 & 0x3f));
-    }
 }
 
 static void attach_zval(json_parser *json, int up, int cur, smart_str *key, int assoc TSRMLS_DC)
@@ -710,7 +674,7 @@ gbk_JSON_parser(zval *z, char p[], int length, int assoc TSRMLS_DC)
                 {
                     if (the_state != 4)
                     {
-                        utf16_to_utf8(&buf, b);
+                        ushort_to_gbk(&buf, b);
                     }
                     else
                     {
@@ -732,7 +696,7 @@ gbk_JSON_parser(zval *z, char p[], int length, int assoc TSRMLS_DC)
                                 smart_str_appendc(&buf, '\r');
                                 break;
                             default:
-                                utf16_to_utf8(&buf, b);
+                                ushort_to_gbk(&buf, b);
                                 break;
                         }
                     }
@@ -752,7 +716,7 @@ gbk_JSON_parser(zval *z, char p[], int length, int assoc TSRMLS_DC)
                 else if (s == 3 && the_state == 8)
                 {
                     utf16 += dehexchar(b);
-                    utf16_to_utf8(&buf, utf16);
+                    ushort_to_gbk(&buf, utf16);
                 }
             }
             else if (type < IS_LONG && (c == S_DIG || c == S_ZER))
@@ -784,7 +748,7 @@ gbk_JSON_parser(zval *z, char p[], int length, int assoc TSRMLS_DC)
             }
             else if (type != IS_STRING && c > S_WSP)
             {
-                utf16_to_utf8(&buf, b);
+                ushort_to_gbk(&buf, b);
             }
 
             the_state = s;
