@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PHP_BIN_DIR=/home/yangfan/workspace/industry/odp/php/bin/
+PHP_BIN_DIR=/Users/woooha/Workspaces/php/bin/
 PHPIZE=$PHP_BIN_DIR/phpize
 PHP_CONFIG=$PHP_BIN_DIR/php-config
 PHP=$PHP_BIN_DIR/php

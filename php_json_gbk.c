@@ -29,9 +29,6 @@
 #include "gbk_JSON_parser.h"
 #include "php_php_json_gbk.h"
 
-ZEND_DECLARE_MODULE_GLOBALS(php_json_gbk)
-
-
 /* True global resources - no need for thread safety here */
 static int le_php_json_gbk;
 
@@ -99,7 +96,7 @@ static PHP_FUNCTION(gbk_json_decode)
 }
 /* }}} */
 
-PHP_PHP_JSON_GBK_API void php_gbk_json_decode_ex(zval *return_value, char *str, int str_len, zend_bool assoc TSRMLS_DC) /* {{{ */
+PHP_PHP_JSON_GBK_API void php_gbk_json_decode(zval *return_value, char *str, int str_len, zend_bool assoc TSRMLS_DC) /* {{{ */
 {
 	zval *z;
 
@@ -107,10 +104,6 @@ PHP_PHP_JSON_GBK_API void php_gbk_json_decode_ex(zval *return_value, char *str, 
 		RETURN_NULL();
 	}
 	
-	if(depth <= 0){
-		RETURN_NULL();
-	}
-
 	ALLOC_INIT_ZVAL(z);
 
 
@@ -129,7 +122,7 @@ PHP_PHP_JSON_GBK_API void php_gbk_json_decode_ex(zval *return_value, char *str, 
 				RETURN_BOOL(1);
 			}
 		} else if (str_len == 5 && !strcasecmp(str, "false")) {
-			RETRUN_BOOL(0);
+			RETURN_BOOL(0);
 		}
 
 		if((type = is_numeric_string(str, str_len, &p, &d, 0)) != 0) {
