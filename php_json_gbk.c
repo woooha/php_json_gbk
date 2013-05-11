@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: header 297205 2010-03-30 21:09:07Z johannes $ */
+/* $Id$ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -25,11 +25,13 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
+#include "ext/standard/php_smart_str.h"
+#include "gbk_JSON_parser.h"
 #include "php_php_json_gbk.h"
+#include <zend_exceptions.h>
 
-/* If you declare any globals in php_php_json_gbk.h uncomment this:
 ZEND_DECLARE_MODULE_GLOBALS(php_json_gbk)
-*/
+
 
 /* True global resources - no need for thread safety here */
 static int le_php_json_gbk;
@@ -39,7 +41,6 @@ static int le_php_json_gbk;
  * Every user visible function must have an entry in php_json_gbk_functions[].
  */
 zend_function_entry php_json_gbk_functions[] = {
-	PHP_FE(confirm_php_json_gbk_compiled,	NULL)		/* For testing, remove later. */
 	PHP_FE(gbk_json_decode, NULL)
 	{NULL, NULL, NULL}	/* Must be the last line in php_json_gbk_functions[] */
 };
@@ -69,26 +70,8 @@ zend_module_entry php_json_gbk_module_entry = {
 ZEND_GET_MODULE(php_json_gbk)
 #endif
 
-/* {{{ PHP_INI
- */
-/* Remove comments and fill if you need to have entries in php.ini
-PHP_INI_BEGIN()
-    STD_PHP_INI_ENTRY("php_json_gbk.global_value",      "42", PHP_INI_ALL, OnUpdateLong, global_value, zend_php_json_gbk_globals, php_json_gbk_globals)
-    STD_PHP_INI_ENTRY("php_json_gbk.global_string", "foobar", PHP_INI_ALL, OnUpdateString, global_string, zend_php_json_gbk_globals, php_json_gbk_globals)
-PHP_INI_END()
-*/
-/* }}} */
-
 /* {{{ php_php_json_gbk_init_globals
  */
-/* Uncomment this function if you have INI entries
-static void php_php_json_gbk_init_globals(zend_php_json_gbk_globals *php_json_gbk_globals)
-{
-	php_json_gbk_globals->global_value = 0;
-	php_json_gbk_globals->global_string = NULL;
-}
-*/
-/* }}} */
 
 /* {{{ PHP_MINFO_FUNCTION
  */
@@ -97,95 +80,109 @@ PHP_MINFO_FUNCTION(php_json_gbk)
 	php_info_print_table_start();
 	php_info_print_table_header(2, "php_json_gbk support", "enabled");
 	php_info_print_table_end();
-	/* Remove comments if you have entries in php.ini
-	DISPLAY_INI_ENTRIES();
-	*/
 }
 /* }}} */
 
-
-/* Remove the following function when you have succesfully modified config.m4
-   so that your module can be compiled into PHP, it exists only for testing
-   purposes. */
-
-/* Every user-visible function in PHP should document itself in the source */
-/* {{{ proto string confirm_php_json_gbk_compiled(string arg)
-   Return a string to confirm that the module is compiled in */
-PHP_FUNCTION(confirm_php_json_gbk_compiled)
-{
-	char *arg = NULL;
-	int arg_len, len;
-	char *strg;
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &arg, &arg_len) == FAILURE) {
-		return;
-	}
-
-	len = spprintf(&strg, 0, "Congratulations! You have successfully modified ext/%.78s/config.m4. Module %.78s is now compiled into PHP.", "php_json_gbk", arg);
-	RETURN_STRINGL(strg, len, 0);
-}
-/* }}} */
 
 /* {{{ proto mixed gbk_json_decode(string json [, bool assoc])
 	Decodes the JSON representation into a PHP value */
 static PHP_FUNCTION(gbk_json_decode)
 {
-	char *parameter;
-	int parameter_len;
+	char *str;
+	int str_len;
 	zend_bool assoc = 0;
+	long depth = JSON_PARSER_DEFAULT_DEPTH;
+	long options = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &parameter, &parameter_len, &assoc) == FAILURE){
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|bll", &str, &str_len, &assoc, &depth, &options) == FAILURE){
 		return;
 	}
-
-	if( !parameter_len ){
+	if( !str_len ){
 		RETURN_NULL();
 	}
 
-	php_json_decode(return_value, parameter, parameter_len, assoc TSRMLS_CC);
+	/* For BC reasons, the bool $assoc overrides the long $options bit for PHP_JSON_OBJECT_AS_ARRAY */
+	if(assoc) {
+		options != PHP_JSON_OBJECT_AS_ARRAY;
+	} else {
+		options &= ~PHP_JSON_OBJECT_AS_ARRAY;
+	}
+
+	php_gbk_json_decode_ex(return_value, str, str_len, options, depth TSRMLS_DC);
 }
 /* }}} */
 
-PHP_PHP_JSON_GBK_API void php_json_decode(zval *return_value, char *buf, int buf_len, zend_bool assoc TSRMLS_DC) /* {{{ */
+PHP_PHP_JSON_GBK_API void php_gbk_json_decode_ex(zval *return_value, char *str, int str_len, long options, long depth TSRMLS_DC) /* {{{ */
 {
 	zval *z;
+	gbk_JSON_parser jp;
 
-	if( buf_len <= 0 ){
+	if( str_len <= 0 ){
+		RETURN_NULL();
+	}
+	
+	if(depth <= 0){
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Depth must be greater than zero");
 		RETURN_NULL();
 	}
 
 	ALLOC_INIT_ZVAL(z);
-	if (JSON_parser(z, buf, buf_len, assoc TSRMLS_CC)){
-		*return_value = *z;
 
+	jp = new_gbk_JSON_parser(depth);
+
+	if (parse_gbk_JSON_ex(jp, z, str, str_len, options TSRMLS_CC)){
+		*return_value = *z;
 		FREE_ZVAL(z);
 	} else {
 		double d;
-		int type;
+		int type, overflow_info;
 		long p;
+		
+		RETVAL_NULL();
+		if( str_len == 4 ){
+			if(!strcasecmp(str, "null")){
+				jp->error_code = PHP_JSON_ERROR_NONE;
+				RETVAL_NULL();
+			} else if( !strcasecmp(str, "true")) {
+				RETVAL_BOOL(1);
+			}
+		} else if (str_len == 5 && !strcasecmp(str, "false")) {
+			RETVAL_BOOL(0);
+		}
+
+		if((type = is_numeric_string_ex(str, str_len, &p, &d, 0, &overflow_info)) != 0) {
+			if( type == IS_LONG){
+				RETVAL_LONG(p);
+			} else if (type == IS_DOUBLE) {
+				if( options & PHP_JSON_BIGINT_AS_STRING && overflow_info){
+					int i;
+					zend_bool is_float = 0;
+					for (i = (str[0] == '-' ? 1:0); i < str_len; i++){
+						if( str[i] < '0' || str[i] > '9'){
+							is_float = 1;
+							break;
+						}
+					}
+
+					if (is_float) {
+						RETVAL_DOUBLE(d);
+					} else {
+						RETVAL_STRINGL(str, str_len, 1);
+					}
+				} else {
+					RETVAL_DOUBLE(d);
+				}
+			}
+		}
+
+		if(Z_TYPE_P(return_value) != IS_NULL) {
+			jp->error_code = PHP_JSON_ERROR_NONE;
+		}
 
 		zval_dtor(z);
-		FREE_ZVAL(z);
-
-		if( buf_len == 4 ) {
-			if (!strcasecmp(buf, "null")) {
-				RETURN_NULL();
-			} else if(!strcasecmp(buf, "true")) {
-				RETURN_BOOL(1);
-			}
-		} else if (buf_len == 5 && !strcasecmp(buf, "false")) {
-			RETURN_BOOL(0);
-		}
-
-		if(( type == is_numeric_string(buf, buf_len, &p, &d, 0)) != 0) {
-			if(type == IS_LONG) {
-				RETURN_LONG(p);
-			} else if(type == IS_DOUBLE) {
-				RETURN_DOUBLE(d);
-			}
-		}
-		RETURN_NULL();
 	}
+	FREE_ZVAL(z);
+	free_gbk_JSON_parser(jp);
 }
 /* }}} */
 

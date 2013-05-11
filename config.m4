@@ -59,5 +59,5 @@ if test "$PHP_PHP_JSON_GBK" != "no"; then
   dnl
   dnl PHP_SUBST(PHP_JSON_GBK_SHARED_LIBADD)
 
-  PHP_NEW_EXTENSION(php_json_gbk, php_json_gbk.c, $ext_shared)
+  PHP_NEW_EXTENSION(php_json_gbk, php_json_gbk.c gbk_JSON_parser.c, $ext_shared)
 fi

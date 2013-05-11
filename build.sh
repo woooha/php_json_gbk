@@ -10,6 +10,9 @@ clean()
 	if [ -f "Makefile" ]; then
 		make clean
 	fi
+	if [ -f "tmp-php.ini" ]; then
+		rm tmp-php.ini
+	fi
 	$PHPIZE --clean
 }
 

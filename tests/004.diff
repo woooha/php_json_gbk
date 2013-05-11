@@ -1,4 +1,0 @@
-001+ NULL
-001- Yang Fan
-002+ 
-003+ Fatal error: Call to undefined function json_last_error() in /home/yangfan/workspace/php_json_gbk/tests/004.php on line 6

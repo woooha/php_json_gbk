@@ -5,5 +5,5 @@ Check for decoding the long.
 $num = "987654321";
 echo gbk_json_decode($num);
 ?>
---EXCPECT--
+--EXPECT--
 987654321

@@ -1,8 +1,0 @@
-
----- EXPECTED OUTPUT
-Yang Fan
----- ACTUAL OUTPUT
-NULL
-
-Fatal error: Call to undefined function json_last_error() in /home/yangfan/workspace/php_json_gbk/tests/004.php on line 6
----- FAILED
