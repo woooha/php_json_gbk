@@ -28,7 +28,6 @@
 #include "ext/standard/php_smart_str.h"
 #include "gbk_JSON_parser.h"
 #include "php_php_json_gbk.h"
-#include <zend_exceptions.h>
 
 ZEND_DECLARE_MODULE_GLOBALS(php_json_gbk)
 
@@ -70,9 +69,6 @@ zend_module_entry php_json_gbk_module_entry = {
 ZEND_GET_MODULE(php_json_gbk)
 #endif
 
-/* {{{ php_php_json_gbk_init_globals
- */
-
 /* {{{ PHP_MINFO_FUNCTION
  */
 PHP_MINFO_FUNCTION(php_json_gbk)
@@ -91,98 +87,60 @@ static PHP_FUNCTION(gbk_json_decode)
 	char *str;
 	int str_len;
 	zend_bool assoc = 0;
-	long depth = JSON_PARSER_DEFAULT_DEPTH;
-	long options = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|bll", &str, &str_len, &assoc, &depth, &options) == FAILURE){
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &str, &str_len, &assoc) == FAILURE){
 		return;
 	}
 	if( !str_len ){
 		RETURN_NULL();
 	}
 
-	/* For BC reasons, the bool $assoc overrides the long $options bit for PHP_JSON_OBJECT_AS_ARRAY */
-	if(assoc) {
-		options != PHP_JSON_OBJECT_AS_ARRAY;
-	} else {
-		options &= ~PHP_JSON_OBJECT_AS_ARRAY;
-	}
-
-	php_gbk_json_decode_ex(return_value, str, str_len, options, depth TSRMLS_DC);
+	php_gbk_json_decode(return_value, str, str_len, assoc TSRMLS_DC);
 }
 /* }}} */
 
-PHP_PHP_JSON_GBK_API void php_gbk_json_decode_ex(zval *return_value, char *str, int str_len, long options, long depth TSRMLS_DC) /* {{{ */
+PHP_PHP_JSON_GBK_API void php_gbk_json_decode_ex(zval *return_value, char *str, int str_len, zend_bool assoc TSRMLS_DC) /* {{{ */
 {
 	zval *z;
-	gbk_JSON_parser jp;
 
 	if( str_len <= 0 ){
 		RETURN_NULL();
 	}
 	
 	if(depth <= 0){
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Depth must be greater than zero");
 		RETURN_NULL();
 	}
 
 	ALLOC_INIT_ZVAL(z);
 
-	jp = new_gbk_JSON_parser(depth);
 
-	if (parse_gbk_JSON_ex(jp, z, str, str_len, options TSRMLS_CC)){
+	if (gbk_JSON_parser(z, str, str_len, assoc TSRMLS_CC)){
 		*return_value = *z;
 		FREE_ZVAL(z);
 	} else {
 		double d;
-		int type, overflow_info;
+		int type;
 		long p;
 		
-		RETVAL_NULL();
 		if( str_len == 4 ){
 			if(!strcasecmp(str, "null")){
-				jp->error_code = PHP_JSON_ERROR_NONE;
-				RETVAL_NULL();
+				RETURN_NULL();
 			} else if( !strcasecmp(str, "true")) {
-				RETVAL_BOOL(1);
+				RETURN_BOOL(1);
 			}
 		} else if (str_len == 5 && !strcasecmp(str, "false")) {
-			RETVAL_BOOL(0);
+			RETRUN_BOOL(0);
 		}
 
-		if((type = is_numeric_string_ex(str, str_len, &p, &d, 0, &overflow_info)) != 0) {
+		if((type = is_numeric_string(str, str_len, &p, &d, 0)) != 0) {
 			if( type == IS_LONG){
-				RETVAL_LONG(p);
+				RETURN_LONG(p);
 			} else if (type == IS_DOUBLE) {
-				if( options & PHP_JSON_BIGINT_AS_STRING && overflow_info){
-					int i;
-					zend_bool is_float = 0;
-					for (i = (str[0] == '-' ? 1:0); i < str_len; i++){
-						if( str[i] < '0' || str[i] > '9'){
-							is_float = 1;
-							break;
-						}
-					}
-
-					if (is_float) {
-						RETVAL_DOUBLE(d);
-					} else {
-						RETVAL_STRINGL(str, str_len, 1);
-					}
-				} else {
-					RETVAL_DOUBLE(d);
-				}
+				RETURN_DOUBLE(d);
 			}
 		}
-
-		if(Z_TYPE_P(return_value) != IS_NULL) {
-			jp->error_code = PHP_JSON_ERROR_NONE;
-		}
-
-		zval_dtor(z);
+		RETURN_NULL();
 	}
-	FREE_ZVAL(z);
-	free_gbk_JSON_parser(jp);
 }
 /* }}} */
 

@@ -29,12 +29,12 @@ enum error_codes {
 };
 
 extern gbk_JSON_parser new_gbk_JSON_parser(int depth);
-extern int parse_gbk_JSON_ex(gbk_JSON_parser jp, zval *z, unsigned short utf16_json[], int length, int options TSRMLS_DC);
+extern int parse_gbk_JSON_ex(gbk_JSON_parser jp, zval *z, char gbk_json[], int length, int options TSRMLS_DC);
 extern int free_JSON_parser(gbk_JSON_parser jp);
 
-static inline int parse_gbk_JSON(gbk_JSON_parser jp, zval *z, unsigned short utf16_json[], int length, int assoc TSRMLS_DC)
+static inline int parse_gbk_JSON(gbk_JSON_parser jp, zval *z, char gbk_json[], int length, int assoc TSRMLS_DC)
 {
-	return parse_gbk_JSON_ex(jp, z, utf16_json, length, assoc ? PHP_JSON_OBJECT_AS_ARRAY : 0 TSRMLS_CC);
+	return parse_gbk_JSON_ex(jp, z, gbk_json, length, assoc ? PHP_JSON_OBJECT_AS_ARRAY : 0 TSRMLS_CC);
 }
 
 #endif

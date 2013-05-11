@@ -376,6 +376,9 @@ static void attach_zval(gbk_JSON_parser jp, int up, int cur, smart_str *key, int
     }
 }
 
+static void gbk_to_utf8(smart_str *buf, unsigned short gbk){
+	smart_str_appendc(buf, (unsigned char) gbk);
+}
 
 #define FREE_BUFFERS() smart_str_free(&buf); smart_str_free(&key);
 #define SWAP_BUFFERS(from, to) do { \
@@ -398,7 +401,7 @@ static void attach_zval(gbk_JSON_parser jp, int up, int cur, smart_str *key, int
     machine with a stack.
 */
 int
-parse_gbk_JSON_ex(gbk_JSON_parser jp, zval *z, unsigned short gbk_json[], int length, int options TSRMLS_DC)
+parse_gbk_JSON_ex(gbk_JSON_parser jp, zval *z, char gbk_json[], int length, int options TSRMLS_DC)
 {
     int next_char;  /* the next character */
     int next_class;  /* the next character class */
@@ -409,11 +412,17 @@ parse_gbk_JSON_ex(gbk_JSON_parser jp, zval *z, unsigned short gbk_json[], int le
     smart_str buf = {0};
     smart_str key = {0};
 
-    unsigned short gbk = 0;
+    char gbk = 0;
     int type;
 
 	JSON_RESET_TYPE();
 
+/*
+	//DEBUG ...
+	for (the_index = 0; the_index < length; the_index ++ ){
+		printf("DEBUG:%c\n", gbk_json[the_index]);
+	}
+*/
     for (the_index = 0; the_index < length; the_index += 1) {
         next_char = gbk_json[the_index];
 		if (next_char >= 128) {
